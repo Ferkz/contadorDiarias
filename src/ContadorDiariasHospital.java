@@ -19,7 +19,12 @@ public class ContadorDiariasHospital extends JFrame {
     private double valorDiaria;
     private String nomeCidade;
 
-        public ContadorDiariasHospital() {
+    private PrintPreviewPane printPreviewPane;
+
+
+    public ContadorDiariasHospital() {
+
+
         setTitle("Contador de Diárias - Hospital");
         setSize(800, 640);
         setResizable(false);
@@ -29,7 +34,13 @@ public class ContadorDiariasHospital extends JFrame {
         JPanel painelPrincipal = new JPanel();
         painelPrincipal.setLayout(null);
 
-        JLabel labelTitulo = new JLabel("Contador de Diárias - Hospital Samar");
+            ImageIcon logoIcon = new ImageIcon("./src/img/logo.png");
+            JLabel logoLabel = new JLabel(logoIcon);
+            logoLabel.setBounds(490, 480, logoIcon.getIconWidth(), logoIcon.getIconHeight());
+            painelPrincipal.add(logoLabel);
+
+
+        JLabel labelTitulo = new JLabel("Contador de Diárias");
         labelTitulo.setFont(new Font("Arial", Font.BOLD, 24));
         labelTitulo.setBounds(200, 20, 450, 30);
         painelPrincipal.add(labelTitulo);
@@ -110,10 +121,11 @@ public class ContadorDiariasHospital extends JFrame {
                 calcularDiarias();
             }
         });
-
+        
         botaoImprimir.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                imprimir();
+                exibirImpressao();
+
             }
         });
 
@@ -136,9 +148,17 @@ public class ContadorDiariasHospital extends JFrame {
         }
 
         int numDiarias = calcularNumeroDiarias(dataEntrada, dataSaida);
-
         double valorTotal = numDiarias * valorDiaria;
 
+
+        labelNumDiarias.setText("Número de Diárias: " + numDiarias);
+        labelValorTotal.setText("Valor Total: " + valorTotal);
+        String tipoAlta = comboBoxTipoAlta.getSelectedItem().toString();
+
+        if (tipoAlta.equals("Óbito") || tipoAlta.equals("Transferência")) {
+            numDiarias--;
+            valorTotal -= valorDiaria;
+        }
         labelNumDiarias.setText("Número de Diárias: " + numDiarias);
         labelValorTotal.setText("Valor Total: " + valorTotal);
     }
@@ -151,7 +171,7 @@ public class ContadorDiariasHospital extends JFrame {
         long numDias = ChronoUnit.DAYS.between(dateEntrada, dateSaida);
 
         // Se quiser contar o dia da saída como uma diária completa,
-        // numDias++;
+        numDias++;
         return (int) numDias;
     }
     private void exibirParametros() {
@@ -209,6 +229,100 @@ public class ContadorDiariasHospital extends JFrame {
         frameParametros.setContentPane(painelParametros);
         frameParametros.setVisible(true);
     }
+    private void exibirImpressao() {
+        String dataEntrada = campoDataEntrada.getText();
+        String dataSaida = campoDataSaida.getText();
+        String tipoAlta = (String) comboBoxTipoAlta.getSelectedItem();
+        String numDiarias = labelNumDiarias.getText().replace("Número de Diárias: ", "");
+        String valorTotal = labelValorTotal.getText().replace("Valor Total: R$ ", "");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Data de Entrada: ").append(dataEntrada).append("\n");
+        sb.append("Data de Saída: ").append(dataSaida).append("\n");
+        sb.append("Tipo de Alta: ").append(tipoAlta).append("\n");
+        sb.append("Número de Diárias: ").append(numDiarias).append("\n");
+        sb.append("Valor Total: R$ ").append(valorTotal).append("\n");
+
+        JTextArea textAreaImpressao = new JTextArea(sb.toString());
+
+        JFrame frameImpressao = new JFrame("Impressão");
+        frameImpressao.setSize(400, 300);
+        frameImpressao.setLocationRelativeTo(null);
+        frameImpressao.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frameImpressao.setContentPane(textAreaImpressao);
+
+        JButton botaoImprimir = new JButton("Imprimir");
+        botaoImprimir.setBounds(10, 230, 100, 30);
+        botaoImprimir.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    textAreaImpressao.print();
+                } catch (PrinterException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "Erro ao imprimir.");
+                }
+            }
+        });
+
+        frameImpressao.add(botaoImprimir);
+
+        frameImpressao.setVisible(true);
+    }
+
+    //visualizar impressão 2
+
+    class PrintPreviewPane extends JPanel {
+        private PrinterJob printJob;
+        private PageFormat pageFormat;
+
+        public PrintPreviewPane(PrinterJob printJob, PageFormat pageFormat) {
+            this.printJob = printJob;
+            this.pageFormat = pageFormat;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+
+            Graphics2D g2d = (Graphics2D) g;
+
+            double scaleX = getWidth() / pageFormat.getWidth();
+            double scaleY = getHeight() / pageFormat.getHeight();
+            double scale = Math.min(scaleX, scaleY);
+
+            g2d.scale(scale, scale);
+
+            try {
+                printJob.setPrintable((graphics, pf, pageIndex) -> {
+                    if (pageIndex > 0) {
+                        return Printable.NO_SUCH_PAGE;
+                    } else {
+                        g2d.translate(pf.getImageableX(), pf.getImageableY());
+
+                        // Desenhe o conteúdo da pré-visualização de impressão
+                        // Exemplo:
+                        g2d.setFont(new Font("Arial", Font.BOLD, 12));
+                        g2d.drawString("Contador de Diárias - Hospital", 50, 50);
+                        g2d.drawString("Data de Entrada: " + campoDataEntrada.getText(), 50, 70);
+                        g2d.drawString("Data de Saída: " + campoDataSaida.getText(), 50, 90);
+                        g2d.drawString("Nome do Paciente: " + campoNomePaciente.getText(), 50, 110);
+                        g2d.drawString("Número Prontuário: " + campoIdPaciente.getText(), 50, 130);
+                        g2d.drawString("Tipo de Alta: " + comboBoxTipoAlta.getSelectedItem().toString(), 50, 150);
+                        g2d.drawString("Número de Diárias: " + labelNumDiarias.getText(), 50, 170);
+                        g2d.drawString("Valor Total: " + labelValorTotal.getText(), 50, 190);
+
+                        return Printable.PAGE_EXISTS;
+                    }
+                }, pageFormat);
+
+                printJob.print();
+            } catch (PrinterException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
     private void imprimir() {
         PrinterJob job = PrinterJob.getPrinterJob();
         job.setPrintable(new Printable() {
